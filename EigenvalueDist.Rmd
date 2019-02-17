@@ -1,0 +1,149 @@
+---
+title: "Eigenvalue Draft"
+author: "Wells"
+date: "February 15, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+ We create a matrix of $n^2$ standard Gaussian variables
+```{r}
+rmatrix<-function(n){
+  vec<-rnorm(n^2,0,1)
+  mat<-matrix(vec,n)
+  return(mat)
+}
+rmatrix(4)
+```
+We compute the eigenvalues of the matrix and create a complex plot 
+```{r}
+randomeigen<-function(n){
+  M<-rmatrix(n)
+  ev<-eigen(M,only.values=TRUE)
+  (values<-ev$values)
+  return(values)
+}
+plot(randomeigen(400),asp=1) #use the asp=1 parameter to ensure a square plot
+```
+For comparison purposes, the graph of the complex circle of radius 1, $|z|=1$, is given by
+```{r}
+x<-seq(-pi,pi,0.1)
+z<- complex(real=0,imag=x)
+plot(exp(z),asp=1,type="l")
+```
+```{r}
+plot(randomeigen(400),asp=1)
+lines(20*exp(z))
+```
+
+How does this compare to $n$ points chosen uniformly on the disk of radius $\sqrt{n}$?
+
+```{r}
+unifdisk<-function(n){
+  s<-sqrt(n)
+  rho <- sqrt(runif(n))
+  theta <- runif(n, 0, 2*pi)
+  x <- rho *s* cos(theta)
+  y <- rho *s* sin(theta)
+  plot(x, y,asp=1)
+}
+unifdisk(400)
+t<-seq(-2*pi,2*pi,0.1)
+lines(20*cos(t),20*sin(t))
+```
+
+Note that eigenvalues for a matrix come in conjugate pairs, so we aren't quite making a fair comparison. Instead, we should uniformly sample $n/2$ points on the upper semicircle, and then reflect across the real axis.
+```{r}
+unifsemi<-function(N){
+  n<-N/2
+  s<-sqrt(N)
+  rho <- sqrt(runif(n))
+  theta <- runif(n, 0, pi)
+  x1 <- rho *s* cos(theta)
+  x2<- rho *s* cos(theta)
+  x<- c(x1,x2)
+  y1 <- rho *s* sin(theta)
+  y2<- -rho *s* sin(theta)
+  y<- c(y1,y2)
+  plot(x, y,asp=1)
+}
+unifsemi(400)
+t<-seq(-2*pi,2*pi,0.1)
+lines(20*cos(t),20*sin(t))
+```
+
+[Discuss density function for eigenvalues?]
+
+If we restrict our attention to those matrices with real eigenvalues, we can obtain a cleaner formula for the joint density function of those eigenvalues. Recall from the Spectral Theorem (or trust me, if you haven't seen this before) that a complex matrix $A$ has real eigenvalues if it is self-adjoint, in the sense that $A = \overline{A}^T$. In the special case when $A$ actually has real entries, then self-adjoint matrices are just symmetric matrices.
+
+There are a few ways to obtain self-adjoint random matrices, but the simplest to execute in R is to generate an ordinary random matrix, and then average across that matrix and its conjugate transpose:
+
+$$A =\frac{M + \overline{M}^T }{\sqrt{2}}$$
+
+We generate a self-adjoint real matrix:
+```{r}
+rmatrixReal<-function(n){
+  M<-rmatrix(n)
+  A<-(M+t(M))/(sqrt(2)) #Real matrix with variance 1
+  return(A)
+}
+A<-rmatrixReal(4)
+A
+isSymmetric.matrix(A)
+```
+
+And we generate a self-adjoint complex matrix:
+
+```{r}
+rmatrixComplex<-function(n){
+  RP<-rmatrix(n) #Real Part
+  IP<-rmatrix(n)*1i #Imaginary Part
+  C<-(RP + IP)/sqrt(2) #Complex Matrix with variance 1
+  A<-(C+t(Conj(C)))/sqrt(2)
+  return(A)
+}
+A<-rmatrixComplex(4)
+A
+isSymmetric.matrix(A)
+
+```
+
+
+As before, we calculate and plot the eigenvalues of A:
+```{r}
+randomeigenReal<-function(n){
+  M<-rmatrixReal(n) 
+  ev<-eigen(M,only.values=TRUE,symmetric=TRUE)
+  (values<-ev$values)
+  return(values)
+}
+#randomeigenReal(4)
+x<-randomeigenReal(64)
+z<-complex(real=x, imag=0)
+plot(z,asp=1)
+```
+```{r}
+randomeigenComplex<-function(n){
+  M<-rmatrixComplex(n) 
+  ev<-eigen(M,only.values=TRUE,symmetric=TRUE)
+  (values<-ev$values)
+  return(values)
+}
+#randomeigenReal(4)
+x<-randomeigenComplex(64)
+z<-complex(real=x, imag=0)
+plot(z,asp=1)
+```
+Finally, we can plot the location of $n$ variables choosen uniformly on the interval $[-2\sqrt{n}, 2\sqrt{n}]$
+```{r}
+N<-64 #Number of variables
+x<-runif(N,- 2*sqrt(N), 2*sqrt(N))
+z<-complex(real=x,imag=0)
+plot(z,asp=1)
+```
+
